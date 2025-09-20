@@ -11,30 +11,54 @@ st.set_page_config(
     layout="wide"
 )
 
-# Apply dark theme styling
+# Apply professional nude/beige theme styling
 st.markdown("""
 <style>
     .stApp {
-        background-color: #0e1117;
-        color: #fafafa;
+        background-color: #f7f5f3;
+        color: #2c2c2c;
     }
     .stSidebar {
-        background-color: #262730;
+        background-color: #ede9e6;
+        border-right: 1px solid #d4cfc8;
     }
     .stSelectbox > div > div {
-        background-color: #262730;
-        color: #fafafa;
+        background-color: #ffffff;
+        border: 1px solid #d4cfc8;
+        color: #2c2c2c;
     }
     .stMultiSelect > div > div {
-        background-color: #262730;
-        color: #fafafa;
+        background-color: #ffffff;
+        border: 1px solid #d4cfc8;
+        color: #2c2c2c;
     }
     .stRadio > div {
-        background-color: #0e1117;
+        background-color: #f7f5f3;
     }
     .stMetric {
-        background-color: #262730;
+        background-color: #ffffff;
         padding: 1rem;
+        border-radius: 0.5rem;
+        border: 1px solid #e8e3de;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    h1 {
+        color: #3d3d3d;
+        font-weight: 600;
+        border-bottom: 2px solid #d4cfc8;
+        padding-bottom: 0.5rem;
+    }
+    h2 {
+        color: #4a4a4a;
+        font-weight: 500;
+    }
+    h3 {
+        color: #5a5a5a;
+        font-weight: 500;
+    }
+    .stExpander {
+        background-color: #ffffff;
+        border: 1px solid #e8e3de;
         border-radius: 0.5rem;
     }
 </style>
