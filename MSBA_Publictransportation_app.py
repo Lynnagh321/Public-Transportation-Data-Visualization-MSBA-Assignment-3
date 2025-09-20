@@ -8,56 +8,58 @@ import numpy as np
 # Page configuration
 st.set_page_config(
     page_title="Lebanon Public Transportation Dashboard",
-    page_icon="🚌",
+    
     layout="wide"
 )
 
 st.title("Lebanon Public Transportation & Infrastructure Dashboard")
 
 
-# Load your data (you'll need to upload the CSV file to your GitHub repo)
+# Load data function
 @st.cache_data
 def load_data():
-    # You need to replace this with the actual path to your CSV file in GitHub
-    # For now, creating sample data based on your visualizations
-    # IMPORTANT: Replace this with: df = pd.read_csv('public_transportation.csv')
+    try:
+        # Load your actual CSV file
+        df = pd.read_csv('public transportation.csv')
+        
+        # Extract governorate from refArea and clean column names  
+        if 'refArea' in df.columns:
+            df['Governorate'] = df['refArea'].str.extract(r'/([^/]+)$')
+        
+        # Clean column names
+        df.columns = df.columns.str.strip()
+        
+        return df
     
-    # Sample data structure based on your notebook
-    np.random.seed(42)
-    
-    regions = ['Marjeyoun_District', 'Batroun_District', 'Zgharta_District', 'North_Governorate', 
-               'Matn_District', 'Tyre_District', 'Beqaa_Governorate', 'Sidon_District']
-    
-    data = []
-    for region in regions:
-        for i in range(50):  # 50 areas per region
-            data.append({
-                'refArea': f'/lebanon/{region.lower()}',
-                'Governorate': region,
-                'The main means of public transport - buses': np.random.choice([0, 1], p=[0.9, 0.1]),
-                'The main means of public transport - vans': np.random.choice([0, 1], p=[0.7, 0.3]),
-                'The main means of public transport - taxis': np.random.choice([0, 1], p=[0.3, 0.7]),
-                'State of the main roads - good': np.random.choice([0, 1], p=[0.8, 0.2]),
-                'State of the main roads - bad': np.random.choice([0, 1], p=[0.7, 0.3]),
-                'State of the secondary roads - bad': np.random.choice([0, 1], p=[0.6, 0.4]),
-                'State of agricultural roads - bad': np.random.choice([0, 1], p=[0.4, 0.6]),
-            })
-    
-    return pd.DataFrame(data)
+    except FileNotFoundError:
+        st.error("CSV file 'public transportation.csv' not found. Please check the file name.")
+        # Return sample data as fallback
+        np.random.seed(42)
+        regions = ['Marjeyoun_District', 'Batroun_District', 'Zgharta_District', 'North_Governorate', 
+                   'Matn_District', 'Tyre_District', 'Beqaa_Governorate', 'Sidon_District']
+        
+        data = []
+        for region in regions:
+            for i in range(50):
+                data.append({
+                    'refArea': f'/lebanon/{region.lower()}',
+                    'Governorate': region,
+                    'The main means of public transport - buses': np.random.choice([0, 1], p=[0.9, 0.1]),
+                    'The main means of public transport - vans': np.random.choice([0, 1], p=[0.7, 0.3]),
+                    'The main means of public transport - taxis': np.random.choice([0, 1], p=[0.3, 0.7]),
+                    'State of the main roads - good': np.random.choice([0, 1], p=[0.8, 0.2]),
+                    'State of the main roads - bad': np.random.choice([0, 1], p=[0.7, 0.3]),
+                    'State of the secondary roads - bad': np.random.choice([0, 1], p=[0.6, 0.4]),
+                    'State of agricultural roads - bad': np.random.choice([0, 1], p=[0.4, 0.6]),
+                })
+        
+        return pd.DataFrame(data)
 
 # Load data
-def load_data():
-    # Load your actual CSV file
-    df = pd.read_csv('public transportation.csv')
-    
-    # Extract governorate from refArea and clean column names  
-    df['Governorate'] = df['refArea'].str.extract(r'/([^/]+)$')
-    df.columns = df.columns.str.strip()  # Remove any extra spaces
-    
-    return df
+df = load_data()
 
 # Interactive Feature 1: Region Selection
-st.sidebar.header("🎛️ Interactive Filters")
+st.sidebar.header(" Interactive Filters")
 st.sidebar.subheader("Region Selection")
 
 available_regions = df['Governorate'].unique()
@@ -81,7 +83,7 @@ filtered_df = df[df['Governorate'].isin(selected_regions)]
 col1, col2 = st.columns(2)
 
 with col1:
-    st.subheader("🚌 Distribution of Main Public Transportation Modes")
+    st.subheader(" Distribution of Main Public Transportation Modes")
     
     # Calculate transport mode totals for selected regions
     transport_modes = {
@@ -118,7 +120,7 @@ with col1:
         st.warning("No transportation data available for selected regions.")
 
 with col2:
-    st.subheader("🛣️ Road Quality by Region")
+    st.subheader(" Road Quality by Region")
     
     # Calculate average road quality scores by region
     road_quality = filtered_df.groupby("Governorate")["State of the main roads - good"].mean().reset_index()
@@ -153,7 +155,7 @@ with col2:
         st.warning("No road quality data available for selected regions.")
 
 # Additional Analysis Row
-st.subheader("📊 Infrastructure Problem Analysis")
+st.subheader(" Infrastructure Problem Analysis")
 
 col3, col4 = st.columns(2)
 
@@ -210,7 +212,7 @@ with col3:
         st.warning("No infrastructure data available for analysis.")
 
 with col4:
-    st.subheader("Transportation vs Road Quality")
+    st.subheader(" Transportation vs Road Quality")
     
     # Create correlation analysis
     if not filtered_df.empty:
@@ -267,7 +269,7 @@ if not filtered_df.empty:
         st.metric("Regions Selected", selected_region_count)
 
 # Data Explorer
-with st.expander("🔍 Data Explorer"):
+with st.expander(" Data Explorer"):
     st.subheader("Raw Data (First 100 rows)")
     st.dataframe(filtered_df.head(100), use_container_width=True)
 
