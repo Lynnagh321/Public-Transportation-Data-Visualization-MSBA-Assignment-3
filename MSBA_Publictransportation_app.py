@@ -2,38 +2,32 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 import numpy as np
 
 # Page configuration
 st.set_page_config(
-    page_title="Lebanon Public Transportation Dashboard",
-    
+    page_title="Lebanon Transportation Infrastructure Analysis",
     layout="wide"
 )
 
-st.title("Lebanon Public Transportation & Infrastructure Dashboard")
-
+st.title("Lebanon Transportation Infrastructure Analysis")
+st.markdown("""
+This dashboard analyzes the relationship between road quality and transportation patterns across different regions in Lebanon. 
+The interactive visualizations reveal how infrastructure quality impacts transportation choices and regional accessibility.
+""")
 
 # Load data function
 @st.cache_data
 def load_data():
     try:
-        # Load your actual CSV file
         df = pd.read_csv('public transportation.csv')
-        
-        # Extract governorate from refArea and clean column names  
         if 'refArea' in df.columns:
             df['Governorate'] = df['refArea'].str.extract(r'/([^/]+)$')
-        
-        # Clean column names
         df.columns = df.columns.str.strip()
-        
         return df
     
     except FileNotFoundError:
-        st.error("CSV file 'public transportation.csv' not found. Please check the file name.")
-        # Return sample data as fallback
+        st.warning("Using sample data for demonstration. Upload 'public transportation.csv' for real data.")
         np.random.seed(42)
         regions = ['Marjeyoun_District', 'Batroun_District', 'Zgharta_District', 'North_Governorate', 
                    'Matn_District', 'Tyre_District', 'Beqaa_Governorate', 'Sidon_District']
@@ -49,8 +43,8 @@ def load_data():
                     'The main means of public transport - taxis': np.random.choice([0, 1], p=[0.3, 0.7]),
                     'State of the main roads - good': np.random.choice([0, 1], p=[0.8, 0.2]),
                     'State of the main roads - bad': np.random.choice([0, 1], p=[0.7, 0.3]),
-                    'State of the secondary roads - bad': np.random.choice([0, 1], p=[0.6, 0.4]),
-                    'State of agricultural roads - bad': np.random.choice([0, 1], p=[0.4, 0.6]),
+                    'State of the secondary roads - good': np.random.choice([0, 1], p=[0.75, 0.25]),
+                    'State of agricultural roads - good': np.random.choice([0, 1], p=[0.6, 0.4]),
                 })
         
         return pd.DataFrame(data)
@@ -58,233 +52,220 @@ def load_data():
 # Load data
 df = load_data()
 
-# Interactive Feature 1: Region Selection
-st.sidebar.header(" Interactive Filters")
+# Sidebar - Interactive Feature 1: Region Selection
+st.sidebar.header("Interactive Controls")
 st.sidebar.subheader("Region Selection")
 
 available_regions = df['Governorate'].unique()
 selected_regions = st.sidebar.multiselect(
     "Select regions to analyze:",
     options=available_regions,
-    default=available_regions[:4]  # Show first 4 by default
+    default=available_regions  # Show all by default
 )
 
-# Interactive Feature 2: Transportation Mode Focus
-st.sidebar.subheader("Transportation Analysis")
-transport_focus = st.sidebar.radio(
-    "Focus analysis on:",
-    options=["All Transport Modes", "Buses Only", "Vans Only", "Taxis Only"]
+# Interactive Feature 2: Road Type Focus
+st.sidebar.subheader("Infrastructure Focus")
+road_type = st.sidebar.selectbox(
+    "Analyze road quality for:",
+    options=[
+        "State of the main roads - good",
+        "State of the secondary roads - good", 
+        "State of agricultural roads - good"
+    ],
+    format_func=lambda x: x.replace("State of the ", "").replace(" - good", "").title()
 )
+
+# Interactive Feature 3: Transportation Mode Weight
+st.sidebar.subheader("Transportation Analysis")
+transport_weight = st.sidebar.radio(
+    "Primary transportation focus:",
+    options=["Taxis", "Buses", "Vans"],
+    help="This affects the size of bubbles in the scatter plot"
+)
+
+transport_column = f"The main means of public transport - {transport_weight.lower()}"
 
 # Filter data based on selections
-filtered_df = df[df['Governorate'].isin(selected_regions)]
+if selected_regions:
+    filtered_df = df[df['Governorate'].isin(selected_regions)]
+else:
+    filtered_df = df
 
-# Main Dashboard Layout
-col1, col2 = st.columns(2)
+# Main content area
+st.markdown("---")
+
+# Context and insights section
+st.subheader("Key Insights")
+col_insight1, col_insight2 = st.columns(2)
+
+with col_insight1:
+    if not filtered_df.empty:
+        avg_road_quality = filtered_df[road_type].mean()
+        total_regions = len(selected_regions) if selected_regions else len(available_regions)
+        st.metric("Average Road Quality Score", f"{avg_road_quality:.3f}", 
+                 help="Higher values indicate better road infrastructure")
+        st.metric("Regions Analyzed", total_regions)
+    
+with col_insight2:
+    if not filtered_df.empty:
+        total_transport = filtered_df[transport_column].sum()
+        transport_percentage = (total_transport / len(filtered_df)) * 100
+        st.metric(f"Areas with {transport_weight}", total_transport)
+        st.metric(f"{transport_weight} Coverage", f"{transport_percentage:.1f}%")
+
+# Main visualizations
+st.markdown("---")
+st.subheader("Transportation Infrastructure Analysis")
+
+# Layout for the two main visualizations
+col1, col2 = st.columns([1, 1])
 
 with col1:
-    st.subheader(" Distribution of Main Public Transportation Modes")
+    st.markdown("### Road Quality by Region")
     
-    # Calculate transport mode totals for selected regions
-    transport_modes = {
-        'Buses': filtered_df['The main means of public transport - buses'].sum(),
-        'Vans': filtered_df['The main means of public transport - vans'].sum(),
-        'Taxis': filtered_df['The main means of public transport - taxis'].sum()
-    }
-    
-    # Remove modes with zero values
-    transport_modes = {k: v for k, v in transport_modes.items() if v > 0}
-    
-    if transport_modes:
-        fig1 = px.pie(
-            values=list(transport_modes.values()),
-            names=list(transport_modes.keys()),
-            title='Public Transportation Distribution in Selected Regions',
-            color_discrete_sequence=['#e74c3c', '#9b59b6', '#1abc9c'],
-            hole=0.4
-        )
+    if not filtered_df.empty:
+        # Calculate average road quality scores by region
+        road_quality = filtered_df.groupby("Governorate")[road_type].mean().reset_index()
+        road_quality = road_quality.sort_values(road_type, ascending=False)
         
-        fig1.update_traces(
-            textposition='inside',
-            textinfo='percent+label+value',
-            textfont_size=12
-        )
-        
-        fig1.update_layout(height=400, showlegend=True)
-        st.plotly_chart(fig1, use_container_width=True)
-        
-        # Show insights
-        dominant_mode = max(transport_modes, key=transport_modes.get)
-        st.info(f"**Dominant Transport Mode**: {dominant_mode} ({transport_modes[dominant_mode]} areas)")
-    else:
-        st.warning("No transportation data available for selected regions.")
-
-with col2:
-    st.subheader(" Road Quality by Region")
-    
-    # Calculate average road quality scores by region
-    road_quality = filtered_df.groupby("Governorate")["State of the main roads - good"].mean().reset_index()
-    road_quality = road_quality.sort_values("State of the main roads - good", ascending=False)
-    
-    if not road_quality.empty:
-        fig2 = px.bar(
+        # Create bar chart
+        fig1 = px.bar(
             road_quality,
             x="Governorate",
-            y="State of the main roads - good",
-            title="Good Main Roads by Region",
-            labels={"Governorate": "Region", "State of the main roads - good": "Quality Score"}, 
-            text="State of the main roads - good",
-            color="State of the main roads - good",
+            y=road_type,
+            title=f"{road_type.replace('State of the ', '').replace(' - good', '').title()} Quality by Region",
+            labels={
+                "Governorate": "Region", 
+                road_type: "Quality Score"
+            }, 
+            text=road_type,
+            color=road_type,
             color_continuous_scale="RdYlGn"
         )
         
-        fig2.update_traces(texttemplate='%{text:.2f}', textposition="outside")
-        fig2.update_layout(
-            height=400,
+        fig1.update_traces(texttemplate='%{text:.2f}', textposition="outside")
+        fig1.update_layout(
+            height=500,
             showlegend=False,
-            xaxis_tickangle=-45
+            xaxis_tickangle=-45,
+            title_x=0.5
         )
         
-        st.plotly_chart(fig2, use_container_width=True)
+        st.plotly_chart(fig1, use_container_width=True)
         
         # Show insights
         best_region = road_quality.iloc[0]['Governorate']
-        best_score = road_quality.iloc[0]['State of the main roads - good']
-        st.success(f"**Best Roads**: {best_region} (Score: {best_score:.2f})")
+        worst_region = road_quality.iloc[-1]['Governorate']
+        best_score = road_quality.iloc[0][road_type]
+        worst_score = road_quality.iloc[-1][road_type]
+        
+        st.success(f"**Best Infrastructure**: {best_region} ({best_score:.3f})")
+        st.error(f"**Needs Improvement**: {worst_region} ({worst_score:.3f})")
+        
     else:
-        st.warning("No road quality data available for selected regions.")
+        st.warning("No data available. Please select at least one region.")
 
-# Additional Analysis Row
-st.subheader(" Infrastructure Problem Analysis")
-
-col3, col4 = st.columns(2)
-
-with col3:
-    st.subheader(" Infrastructure Priority Matrix")
+with col2:
+    st.markdown("### Transportation vs Road Quality")
     
-    # Calculate infrastructure problems
-    infrastructure_problems = []
-    infrastructure_mapping = {
-        'Main Roads': 'State of the main roads - bad',
-        'Secondary Roads': 'State of the secondary roads - bad',
-        'Agricultural Roads': 'State of agricultural roads - bad'
-    }
-    
-    for service, bad_col in infrastructure_mapping.items():
-        if bad_col in filtered_df.columns:
-            bad_count = filtered_df[bad_col].sum()
-            total_areas = len(filtered_df)
-            if total_areas > 0:
-                problem_percentage = (bad_count / total_areas) * 100
-                infrastructure_problems.append({
-                    'Service': service,
-                    'Problem_Severity': problem_percentage,
-                    'Areas_Affected': bad_count
-                })
-    
-    if infrastructure_problems:
-        problem_df = pd.DataFrame(infrastructure_problems)
-        problem_df = problem_df.sort_values('Problem_Severity', ascending=True)
-        
-        fig3 = px.bar(
-            problem_df,
-            x='Problem_Severity',
-            y='Service',
-            orientation='h',
-            title='Infrastructure Issues by Severity',
-            labels={
-                'Problem_Severity': 'Percentage of Areas with Poor Service (%)',
-                'Service': 'Infrastructure Type'
-            },
-            color='Problem_Severity',
-            color_continuous_scale='Reds',
-            text='Problem_Severity'
-        )
-        
-        fig3.update_traces(
-            texttemplate='%{text:.1f}%',
-            textposition='outside'
-        )
-        
-        fig3.update_layout(height=400, showlegend=False)
-        st.plotly_chart(fig3, use_container_width=True)
-    else:
-        st.warning("No infrastructure data available for analysis.")
-
-with col4:
-    st.subheader(" Transportation vs Road Quality")
-    
-    # Create correlation analysis
     if not filtered_df.empty:
-        # Group by region and calculate averages
+        # Create correlation analysis
         region_analysis = filtered_df.groupby('Governorate').agg({
-            'State of the main roads - good': 'mean',
+            road_type: 'mean',
             'The main means of public transport - buses': 'sum',
             'The main means of public transport - vans': 'sum',
             'The main means of public transport - taxis': 'sum'
         }).reset_index()
         
         # Create scatter plot
-        fig4 = px.scatter(
+        fig2 = px.scatter(
             region_analysis,
-            x='State of the main roads - good',
+            x=road_type,
             y='The main means of public transport - taxis',
-            size='The main means of public transport - buses',
+            size=transport_column,
             color='Governorate',
             title='Road Quality vs Transportation Usage',
             labels={
-                'State of the main roads - good': 'Road Quality Score',
-                'The main means of public transport - taxis': 'Taxi Usage'
+                road_type: 'Road Quality Score',
+                'The main means of public transport - taxis': 'Taxi Services',
+                transport_column: f'{transport_weight} Services'
             },
-            hover_data=['The main means of public transport - vans']
+            hover_data=['The main means of public transport - buses', 'The main means of public transport - vans'],
+            size_max=30
         )
         
-        fig4.update_layout(height=400)
-        st.plotly_chart(fig4, use_container_width=True)
+        fig2.update_layout(
+            height=500,
+            title_x=0.5
+        )
+        
+        st.plotly_chart(fig2, use_container_width=True)
+        
+        # Calculate correlation
+        correlation = region_analysis[road_type].corr(region_analysis['The main means of public transport - taxis'])
+        
+        if correlation > 0.3:
+            st.info(f"**Positive correlation detected**: Better roads tend to have more taxi services (r = {correlation:.3f})")
+        elif correlation < -0.3:
+            st.info(f"**Negative correlation detected**: Better roads tend to have fewer taxi services (r = {correlation:.3f})")
+        else:
+            st.info(f"**Weak correlation**: Road quality and taxi services show little relationship (r = {correlation:.3f})")
+    
     else:
-        st.warning("No data available for correlation analysis.")
+        st.warning("No data available. Please select at least one region.")
 
-# Summary Statistics
-st.subheader(" Summary Statistics")
-
-if not filtered_df.empty:
-    col5, col6, col7, col8 = st.columns(4)
-    
-    with col5:
-        total_areas = len(filtered_df)
-        st.metric("Total Areas Analyzed", total_areas)
-    
-    with col6:
-        avg_road_quality = filtered_df['State of the main roads - good'].mean()
-        st.metric("Average Road Quality", f"{avg_road_quality:.2f}")
-    
-    with col7:
-        total_transport = (filtered_df['The main means of public transport - buses'].sum() + 
-                          filtered_df['The main means of public transport - vans'].sum() + 
-                          filtered_df['The main means of public transport - taxis'].sum())
-        st.metric("Total Transport Services", total_transport)
-    
-    with col8:
-        selected_region_count = len(selected_regions)
-        st.metric("Regions Selected", selected_region_count)
-
-# Data Explorer
-with st.expander(" Data Explorer"):
-    st.subheader("Raw Data (First 100 rows)")
-    st.dataframe(filtered_df.head(100), use_container_width=True)
-
-# Footer with insights
+# Summary analysis
 st.markdown("---")
-st.markdown("""
-**Key Interactive Features:**
-- **Region Filter**: Select specific regions to focus your analysis
-- **Transportation Mode Focus**: Choose which transport modes to emphasize
-- **Dynamic Updates**: All visualizations update based on your selections
-- **Correlation Analysis**: Explore relationships between road quality and transport usage
+st.subheader("Analysis Summary")
 
-**Insights You Can Discover:**
-- Which regions have the best/worst road infrastructure
-- How transportation preferences vary by region  
-- Which infrastructure issues need urgent attention
-- The relationship between road quality and transport mode preferences
-""")
+if not filtered_df.empty and len(selected_regions) > 1:
+    summary_col1, summary_col2, summary_col3 = st.columns(3)
+    
+    with summary_col1:
+        quality_range = filtered_df[road_type].max() - filtered_df[road_type].min()
+        st.metric("Quality Range", f"{quality_range:.3f}", 
+                 help="Difference between best and worst road quality")
+    
+    with summary_col2:
+        transport_variance = filtered_df[transport_column].var()
+        st.metric("Transport Variation", f"{transport_variance:.2f}",
+                 help="How much transportation access varies across regions")
+    
+    with summary_col3:
+        regions_analyzed = len(selected_regions)
+        st.metric("Regions in Analysis", regions_analyzed)
+
+# Interactive insights based on user selections
+st.markdown("---")
+st.subheader("Dynamic Insights")
+
+insights_text = f"""
+**Current Analysis Configuration:**
+- **Road Type**: {road_type.replace('State of the ', '').replace(' - good', '').title()}
+- **Regions**: {', '.join(selected_regions) if selected_regions else 'All regions'}
+- **Transportation Focus**: {transport_weight}
+
+**How to Use This Dashboard:**
+1. **Region Filter**: Select specific regions to focus your analysis on particular areas of Lebanon
+2. **Road Type Selector**: Switch between main roads, secondary roads, and agricultural roads to see different infrastructure aspects
+3. **Transportation Focus**: Change which transportation mode is emphasized in the bubble sizes of the scatter plot
+
+**What These Visualizations Show:**
+- The **bar chart** reveals which regions have the best/worst road infrastructure for your selected road type
+- The **scatter plot** shows whether there's a relationship between road quality and transportation service availability
+- **Bubble sizes** represent the prevalence of your selected transportation mode in each region
+"""
+
+st.markdown(insights_text)
+
+# Data explorer
+with st.expander("Raw Data Explorer"):
+    st.markdown("**Filtered Dataset Preview**")
+    if not filtered_df.empty:
+        st.dataframe(
+            filtered_df[['Governorate', road_type, 'The main means of public transport - buses', 
+                        'The main means of public transport - vans', 'The main means of public transport - taxis']].head(20), 
+            use_container_width=True
+        )
+    else:
+        st.warning("No data to display. Please select at least one region.")
