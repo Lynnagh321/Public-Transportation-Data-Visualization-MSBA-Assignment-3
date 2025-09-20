@@ -12,11 +12,8 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("🚌 Lebanon Public Transportation & Infrastructure Dashboard")
-st.markdown("""
-This interactive dashboard analyzes public transportation and infrastructure quality across Lebanon.
-Use the filters below to explore different aspects of the data and discover insights.
-""")
+st.title("Lebanon Public Transportation & Infrastructure Dashboard")
+
 
 # Load your data (you'll need to upload the CSV file to your GitHub repo)
 @st.cache_data
@@ -155,7 +152,7 @@ st.subheader("📊 Infrastructure Problem Analysis")
 col3, col4 = st.columns(2)
 
 with col3:
-    st.subheader("🚨 Infrastructure Priority Matrix")
+    st.subheader(" Infrastructure Priority Matrix")
     
     # Calculate infrastructure problems
     infrastructure_problems = []
@@ -207,7 +204,7 @@ with col3:
         st.warning("No infrastructure data available for analysis.")
 
 with col4:
-    st.subheader("📈 Transportation vs Road Quality")
+    st.subheader("Transportation vs Road Quality")
     
     # Create correlation analysis
     if not filtered_df.empty:
@@ -240,7 +237,7 @@ with col4:
         st.warning("No data available for correlation analysis.")
 
 # Summary Statistics
-st.subheader("📋 Summary Statistics")
+st.subheader(" Summary Statistics")
 
 if not filtered_df.empty:
     col5, col6, col7, col8 = st.columns(4)
