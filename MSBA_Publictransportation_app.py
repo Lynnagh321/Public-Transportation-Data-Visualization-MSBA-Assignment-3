@@ -50,6 +50,8 @@ def load_data():
 
 # Load data
 df = load_data()
+    # Load your actual CSV file
+    df = pd.read_csv('public transportation.csv')
 
 # Interactive Feature 1: Region Selection
 st.sidebar.header("🎛️ Interactive Filters")
