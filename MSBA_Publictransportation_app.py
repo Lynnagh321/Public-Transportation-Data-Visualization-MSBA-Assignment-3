@@ -46,9 +46,15 @@ def load_data():
     return pd.DataFrame(data)
 
 # Load data
-df = load_data()
+def load_data():
     # Load your actual CSV file
     df = pd.read_csv('public transportation.csv')
+    
+    # Extract governorate from refArea and clean column names  
+    df['Governorate'] = df['refArea'].str.extract(r'/([^/]+)$')
+    df.columns = df.columns.str.strip()  # Remove any extra spaces
+    
+    return df
 
 # Interactive Feature 1: Region Selection
 st.sidebar.header("🎛️ Interactive Filters")
