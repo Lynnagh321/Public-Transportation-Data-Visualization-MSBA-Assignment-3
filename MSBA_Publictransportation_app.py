@@ -1,3 +1,4 @@
+
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -9,6 +10,35 @@ st.set_page_config(
     page_title="Lebanon Transportation Infrastructure Analysis",
     layout="wide"
 )
+
+# Apply dark theme styling
+st.markdown("""
+<style>
+    .stApp {
+        background-color: #0e1117;
+        color: #fafafa;
+    }
+    .stSidebar {
+        background-color: #262730;
+    }
+    .stSelectbox > div > div {
+        background-color: #262730;
+        color: #fafafa;
+    }
+    .stMultiSelect > div > div {
+        background-color: #262730;
+        color: #fafafa;
+    }
+    .stRadio > div {
+        background-color: #0e1117;
+    }
+    .stMetric {
+        background-color: #262730;
+        padding: 1rem;
+        border-radius: 0.5rem;
+    }
+</style>
+""", unsafe_allow_html=True)
 
 st.title("Lebanon Transportation Infrastructure Analysis")
 st.markdown("""
@@ -216,47 +246,6 @@ with col2:
 
 # Summary analysis
 st.markdown("---")
-st.subheader("Analysis Summary")
-
-if not filtered_df.empty and len(selected_regions) > 1:
-    summary_col1, summary_col2, summary_col3 = st.columns(3)
-    
-    with summary_col1:
-        quality_range = filtered_df[road_type].max() - filtered_df[road_type].min()
-        st.metric("Quality Range", f"{quality_range:.3f}", 
-                 help="Difference between best and worst road quality")
-    
-    with summary_col2:
-        transport_variance = filtered_df[transport_column].var()
-        st.metric("Transport Variation", f"{transport_variance:.2f}",
-                 help="How much transportation access varies across regions")
-    
-    with summary_col3:
-        regions_analyzed = len(selected_regions)
-        st.metric("Regions in Analysis", regions_analyzed)
-
-# Interactive insights based on user selections
-st.markdown("---")
-st.subheader("Dynamic Insights")
-
-insights_text = f"""
-**Current Analysis Configuration:**
-- **Road Type**: {road_type.replace('State of the ', '').replace(' - good', '').title()}
-- **Regions**: {', '.join(selected_regions) if selected_regions else 'All regions'}
-- **Transportation Focus**: {transport_weight}
-
-**How to Use This Dashboard:**
-1. **Region Filter**: Select specific regions to focus your analysis on particular areas of Lebanon
-2. **Road Type Selector**: Switch between main roads, secondary roads, and agricultural roads to see different infrastructure aspects
-3. **Transportation Focus**: Change which transportation mode is emphasized in the bubble sizes of the scatter plot
-
-**What These Visualizations Show:**
-- The **bar chart** reveals which regions have the best/worst road infrastructure for your selected road type
-- The **scatter plot** shows whether there's a relationship between road quality and transportation service availability
-- **Bubble sizes** represent the prevalence of your selected transportation mode in each region
-"""
-
-st.markdown(insights_text)
 
 # Data explorer
 with st.expander("Raw Data Explorer"):
